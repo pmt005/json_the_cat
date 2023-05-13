@@ -1,26 +1,40 @@
 const request = require('request');
-const inputArg = process.argv.slice(2);
-let url = `https://api.thecatapi.com/v1/breeds/search?q=`;
 
-const breedFetcher = () => {
-  request(url + inputArg[0], (error, response, body) => {
-    if (error) {
-      console.log('error: ', error); // Print the error if one occurred
-      console.log('statusCode: ', response && response.statusCode);
-      return;
-    }
 
-    const dataObj = JSON.parse(body); //This is actually an array where the first element is an obj body
+const fetchBreedDescription = (breed, callback) => {
+  let url = `https://api.thecatapi.com/v1/breeds/search?q=${breed}`;
+  
+  request(url, (error, response, body) => {
     
-    //This conditional captures invalid input
-    if (dataObj[0] === undefined) {
-      console.log("invalid input, breed not found");
-      return;
+
+    //FILTER TOWARD THE HAPPY PATH WITH TRUTHY FALSY
+    if (!error) {
+      //BAD statusCODE
+      if (response.statusCode !== 200) {
+        return callback(`Trouble connecting expected status code 200 received ${response.statusCode}`);
+      }
+
+      //No body data sent to client
+      if (!body) {
+        return callback(`No body data sent to client`);
+      }
+      let catPages = JSON.parse(body); //This is actually an array where the first element is an obj body
+      
+      //breed not found
+      if (catPages[0] === undefined) {
+        return callback(`Trouble finding that breed, you searched ${breed} and it wasn't found`);
+      }
+    
+      //HAPPY PATH HAPPY PATH HAPPY PATH
+      return callback(null, catPages[0].description);
     }
 
-    console.log(dataObj[0].description);
+    //request error
+    return callback(error);
+    
   });
 };
 
-breedFetcher();
 
+
+module.exports = { fetchBreedDescription };
